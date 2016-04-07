@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ##################
-# Usage: cronalytics.sh <private-hash> <command>
+# Usage: cronalytics.sh <private-hash> [<command>]
 # Version: 0.1
 ##################
 
@@ -42,6 +42,7 @@ shift
 # Check that a hash was passed in
 if [[ -z $HASH ]]; then
     log Hash not found in first argument, exiting
+    >&2 echo "Usage: cronalytics.sh <private-hash> [<command>]"
     exit;
 fi
 log Hash found ["$HASH"]
