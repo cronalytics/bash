@@ -5,9 +5,9 @@
 # Version: 0.1
 ##################
 
-readonly API_URL="http://api.cronalytics.io"
-#readonly API_URL="http://localhost:8080"
-readonly DEBUG=false;
+#readonly API_URL="http://api.cronalytics.io"
+readonly API_URL="http://localhost:8080"
+readonly DEBUG=true;
 
 log() {
     local ARGS=$@;
