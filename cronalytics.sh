@@ -3,17 +3,22 @@
 ##################
 # Usage: cronalytics.sh <private-hash> [<command>]
 # Version: 0.1
+# https://github.com/cronalytics/bash
+#
+# This script is used to run a command and report the start, end and result to https://cronalytics.io where reoccuring
+# tasks can be monitored by anyone.
+#
 ##################
 
-#readonly API_URL="http://api.cronalytics.io"
-readonly API_URL="http://localhost:8080"
-readonly DEBUG=true;
+readonly API_URL="http://api.cronalytics.io"
+readonly DEBUG=false
 
 log() {
-    local ARGS=$@;
+    local ARGS=$@
 
     if $DEBUG; then
-        echo -- "$ARGS";
+        echo -- "$ARGS"
+        echo -- "$ARGS" >> /tmp/cronalytics.log
     fi
 }
 
@@ -70,14 +75,16 @@ if  [[ !$START_ONLY ]]; then
 
     # Execute the cron and grab the result.
     SCRIPT_RESULT=$($@ 2> /tmp/cron-error)
+    SCRIPT_EXIT_CODE=$?
     SCRIPT_ERROR=$(</tmp/cron-error)
+
     #`rm /tmp/cron-error`
 
 
     SUCCESS=true
-    if [[  ! -z "$SCRIPT_ERROR" ]] ; then
+    if [[  ! -z "$SCRIPT_ERROR" || $SCRIPT_EXIT_CODE > 0 ]] ; then
         SUCCESS=false
-        log xx Error in User script
+        log -- Error in User script [$SCRIPT_ERROR]
         if [ ! -z "$SCRIPT_RESULT" ] ; then
             SCRIPT_RESULT="$SCRIPT_RESULT n ";
         fi
