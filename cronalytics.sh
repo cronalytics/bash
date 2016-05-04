@@ -2,7 +2,7 @@
 
 ##################
 # Usage: cronalytics.sh <private-hash> [<command>]
-# Version: 0.1
+# Version: 0.2
 # https://github.com/cronalytics/bash
 #
 # This script is used to run a command and report the start, end and result to https://cronalytics.io where reoccuring
