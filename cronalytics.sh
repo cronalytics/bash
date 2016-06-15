@@ -10,11 +10,12 @@
 #
 ##################
 
-readonly API_URL="http://api.cronalytics.io"
-readonly DEBUG=false
+#readonly API_URL="http://api.cronalytics.io"
+readonly API_URL="http://localhost:8080"
+readonly DEBUG=true
 
 log() {
-    local ARGS=$@
+    local ARGS=$*
 
     if $DEBUG; then
         echo -- "$ARGS"
@@ -25,19 +26,20 @@ log() {
 log "> Manager starting"
 
 escape_json() {
-    local RAW=$@;
+    local JSON_TOPIC_RAW=$*;
 
-    RAW=${RAW///} #
-    RAW=${RAW/////} # / 
-    RAW=${RAW//'/'} # ' (not strictly needed ?)
-    RAW=${RAW//"/"} # " 
-    RAW=${RAW///t} # t (tab)
-    RAW=${RAW///n} # n (newline)
-    RAW=${RAW//^M/r} # r (carriage return)
-    RAW=${RAW//^L/f} # f (form feed)
-    RAW=${RAW//^H/b} # b (backspace)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//\\/\\\\} # \
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//\//\\\/} # /
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//\'/\\\'} # ' (not strictly needed ?)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//\"/\\\"} # "
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//   /\\t} # \t (tab)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//
+/\\\n} # \n (newline)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//^M/\\\r} # \r (carriage return)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//^L/\\\f} # \f (form feed)
+    JSON_TOPIC_RAW=${JSON_TOPIC_RAW//^H/\\\b} # \b (backspace)
 
-    return $RAW
+    echo "$JSON_TOPIC_RAW"
 }
 
 # Get the private cron has which is the first argument.
@@ -56,7 +58,7 @@ log Hash found ["$HASH"]
 START_ONLY=false;
 if [[ -z "$@" ]]; then
     START_ONLY=true;
-    log args empty, only the start time will be logged [START_ONLY=true]
+    log "args empty, only the start time will be logged [START_ONLY=true]"
 fi
 
 # Get the time the cron started
@@ -68,28 +70,28 @@ START_PAYLOAD="{\"start\": \"$START\"}"
 END_ENDPOINT=$(curl -s -S -X POST -d "$START_PAYLOAD" --header "Content-type:  application/json" --header "Accept: text/plain" "$API_URL/cron/$HASH?fields=links:end:url")
 log "Start time recorded [$START], endpoint for completion [$END_ENDPOINT]"
 
-
-if  [[ !$START_ONLY ]]; then
+if ! ${START_ONLY}; then
 
     log "Running user script";
 
     # Execute the cron and grab the result.
-    SCRIPT_RESULT=$($@ 2> /tmp/cron-error)
+    SCRIPT_RESULT=$("$@" 2> /tmp/cron-error)
     SCRIPT_EXIT_CODE=$?
     SCRIPT_ERROR=$(</tmp/cron-error)
 
     #`rm /tmp/cron-error`
 
-
     SUCCESS=true
-    if [[  ! -z "$SCRIPT_ERROR" || $SCRIPT_EXIT_CODE > 0 ]] ; then
+    if [[  ! -z "$SCRIPT_ERROR" || $SCRIPT_EXIT_CODE -gt 0 ]] ; then
         SUCCESS=false
-        log -- Error in User script [$SCRIPT_ERROR]
+        log "-- Error in User script [$SCRIPT_ERROR]"
         if [ ! -z "$SCRIPT_RESULT" ] ; then
             SCRIPT_RESULT="$SCRIPT_RESULT n ";
         fi
-        SCRIPT_RESULT=escape_json "$SCRIPT_RESULT$SCRIPT_ERROR";
     fi
+    log "Script result [$SCRIPT_RESULT]";
+    SCRIPT_RESULT=$(escape_json "$SCRIPT_RESULT$SCRIPT_ERROR");
+    log "encoded Script result [$SCRIPT_RESULT]";
 
     # Tell the API the script finished
     END=$(date +%Y-%m-%dT%H:%M:%S%z)
@@ -98,7 +100,7 @@ if  [[ !$START_ONLY ]]; then
 
     PAYLOAD="{\"end\": \"$END\", \"result\":\"$SCRIPT_RESULT\", \"success\": $SUCCESS}"
 
-    log Script result being sent to server [$PAYLOAD]
+    log "Script result being sent to server [$PAYLOAD]"
 
     END_RESULT=$(curl -s -S -X PATCH -d "$PAYLOAD" --header "Content-type:  application/json" "$END_ENDPOINT")
     log End sent  ["$END_RESULT"]
